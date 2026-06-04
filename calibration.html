@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calibration — Physics Explorer</title>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+<link rel="stylesheet" href="styles.css">
+<style>
+  .split-left {
+    width: 100%;
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 6rem 2rem 6rem;
+    gap: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Top row: name left, controls label right */
+  .cal-top-row {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    /* margin-bottom: 1rem; */
+  }
+  .cal-gesture-name-box {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.6rem;
+  }
+  .cal-controls-label {
+    background: #111;
+    color: #fff;
+    padding: 10px 24px;
+    font-size: 0.9rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+
+  /* Gesture image */
+  .cal-image-box {
+    width: clamp(180px, 26vw, 280px);
+    height: clamp(180px, 26vw, 280px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .cal-image-box img {
+    width: 75%;
+    height: 75%;
+    object-fit: contain;
+
+  }
+
+  /* Step pills — one per gesture */
+  .gesture-steps {
+    display: flex;
+    gap: 0.6rem;
+    justify-content: center;
+  }
+  .gesture-step {
+    padding: 0.4rem 1rem;
+    font-size: 0.85rem;
+    font-family: inherit;
+    border: 1.5px solid #ccc;
+    background: transparent;
+    color: #888;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-radius: 2px;
+  }
+  .gesture-step.active {
+    border-color: #111;
+    color: #111;
+    font-weight: 600;
+  }
+  .gesture-step.done {
+    border-color: var(--pink);
+    color: var(--pink);
+  }
+
+  /* Big gesture name */
+  #gesture-name {
+    font-size: clamp(2rem, 3vw, 3.5rem);
+    font-weight: 400;
+    letter-spacing: -0.03em;
+  }
+
+  /* Instruction text */
+  #cal-instruction {
+    font-size: 1rem;
+    text-align: center;
+    max-width: 300px;
+    line-height: 1.9;
+    color: #555;
+  }
+
+  p.calibration-note {
+    font-size: 0.9rem;
+    text-align: center;
+    max-width: 420px;
+    line-height: 1.6;
+    color: #555;
+    margin-top: 0.8rem;
+  }
+
+  /* Detection indicator bar */
+  #detect-bar-wrap {
+    width: 220px;
+    height: 6px;
+    background: #eee;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  #detect-bar {
+    height: 100%;
+    width: 0%;
+    background: var(--pink);
+    border-radius: 3px;
+    transition: width 0.1s linear;
+  }
+
+  /* Gravity label on right panel */
+  .gravity-label {
+    position: absolute;
+    top: 22px; right: 22px;
+  }.hamburger-wrap {
+  position: fixed;
+  bottom: 24px; left: 10px;
+  z-index: 50;
+}
+.hamburger-btn {
+  width: 52px; height: 52px;
+  /* background: rgba(0,0,0,0.08); */
+  /* border: 1.5px solid rgba(0,0,0,0.2); */
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 5px;
+  transition: background 0.18s;
+  position: relative; z-index: 2;
+}
+/* .hamburger-btn:hover { background: rgba(0,0,0,0.14); } */
+.hamburger-btn span {
+  display: block; width: 20px; height: 2px;
+  background: #111; border-radius: 1px;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+  transform-origin: center;
+}
+/* .hamburger-wrap.open .hamburger-btn { background: rgba(0,0,0,0.12); } */
+.hamburger-wrap.open .hamburger-btn span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.hamburger-wrap.open .hamburger-btn span:nth-child(2) { opacity: 0; transform: scaleX(0); }
+.hamburger-wrap.open .hamburger-btn span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+.hamburger-menu {
+  position: absolute;
+  bottom: 0; left: 52px;
+  background: rgba(240,240,240,0.97);
+  /* border: 1.5px solid rgba(0,0,0,0.15); */
+  border-left: none;
+  display: flex; flex-direction: row; align-items: stretch;
+  overflow: hidden;
+  width: 0;
+  transition: width 0.35s cubic-bezier(0.76, 0, 0.24, 1);
+  white-space: nowrap;
+}
+.hamburger-wrap.open .hamburger-menu { width: 240px; }
+
+.hamburger-link {
+  padding: 0 28px; height: 52px;
+  font-size: 0.9rem; font-family: inherit;
+  color: rgba(0,0,0,0.65); cursor: pointer;
+  border: none; background: transparent;
+  letter-spacing: 0.04em;
+  transition: background 0.18s, color 0.18s;
+  border-left: 1px solid rgba(0,0,0,0.1);
+}
+.hamburger-link:first-child { border-left: none; }
+.hamburger-link:hover { background: rgba(0,0,0,0.06); color: #111; }
+</style>
+</head>
+<body>
+<!-- <a class="btn-back" href="gesture-guide.html"></a>
+<a class="btn-next" href="ready.html"></a> -->
+
+<div class="split">
+  <div class="page-overlay"></div>
+
+  <!-- Full-width calibration UI -->
+  <div class="split-left">
+
+    <!-- Top row: gesture name (left) + what it controls (right) -->
+    <div class="cal-top-row">
+      <div class="cal-gesture-name-box">
+        <div class="gesture-steps" id="gesture-steps"></div>
+        <div id="gesture-name">Pinch</div>
+      </div>
+      <div class="cal-controls-label" id="right-label">Gravity</div>
+    </div>
+
+    <!-- Gesture image -->
+    <div class="cal-image-box">
+      <img id="cal-image" src="illustrations/pinch-calibration.png" alt="gesture"
+        onerror="this.style.display='none'">
+    </div>
+
+    <!-- Instruction + progress -->
+    <p id="cal-instruction">Bring your thumb and index finger together</p>
+    <div id="detect-bar-wrap">
+      <div id="detect-bar"></div>
+    </div>
+
+    <p class="calibration-note">Use your left hand for pinch to generate gravity and choose where to form the celestial body, then use your right hand to shake and increase turbulence within the molecular cloud.</p>
+
+  </div>
+</div>
+
+<script src="shared.js"></script>
+<script>
+injectCameraBg();
+injectFlash();
+
+// ─── GESTURE SEQUENCE ─────────────────────────────────────────────────
+const gestures = [
+  {
+    name: 'Pinch',
+    instruction: 'Bring your thumb and index finger together',
+    detect: detectPinch,
+    image: 'illustrations/pinch-calibration.png',
+  },
+  {
+    name: 'Shake Hand',
+    instruction: 'Shake your hand side to side quickly',
+    detect: detectShake,
+    image: 'illustrations/shake-hand-calibration.png',
+  },
+];
+
+let currentIdx = 0;
+let holdProgress = 0;       // 0–100, fills progress bar
+let transitioning = false;  // lock out re-detection during transition
+
+// ─── STEP PILLS ───────────────────────────────────────────────────────
+function buildSteps() {
+  const container = document.getElementById('gesture-steps');
+  gestures.forEach((g, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'gesture-step' + (i === 0 ? ' active' : '');
+    btn.textContent = g.name;
+    btn.onclick = () => jumpTo(i);
+    container.appendChild(btn);
+  });
+}
+buildSteps();
+
+function updateStepUI() {
+  document.querySelectorAll('.gesture-step').forEach((el, i) => {
+    el.classList.toggle('active', i === currentIdx);
+    el.classList.toggle('done', i < currentIdx);
+  });
+}
+
+function jumpTo(idx) {
+  if (transitioning) return;
+  currentIdx = idx;
+  holdProgress = 0;
+  transitioning = false;
+  prevLandmarks = null;
+  velocityHistory = [];
+  shakeXHistory = [];
+  updateStepUI();
+  updateGestureUI();
+}
+
+function updateGestureUI() {
+  const g = gestures[currentIdx];
+  document.getElementById('gesture-name').textContent = g.name;
+  document.getElementById('cal-instruction').textContent = g.instruction;
+  const detectBar = document.getElementById('detect-bar');
+  detectBar.style.width = '0%';
+  detectBar.style.background = 'var(--pink)';
+  const img = document.getElementById('cal-image');
+  if (img && g.image) {
+    img.src = g.image;
+    img.style.display = 'block';
+  }
+}
+
+// ─── GESTURE DETECTORS ────────────────────────────────────────────────
+
+// Pinch: thumb tip (4) close to index tip (8)
+function detectPinch(landmarks) {
+  const thumb = landmarks[4], index = landmarks[8];
+  const dist = Math.sqrt((thumb.x - index.x)**2 + (thumb.y - index.y)**2);
+  return dist < 0.06; // clear pinch threshold
+}
+
+let prevLandmarks = null;
+let velocityHistory = [];
+
+// Shake: count left↔right direction reversals — far more reliable than avg velocity.
+let shakeXHistory = [];
+const SHAKE_WINDOW = 20;
+const SHAKE_MIN_MOVE = 0.012; // min normalised delta to register as a direction
+const SHAKE_REVERSALS_NEEDED = 3;
+
+function detectShake(landmarks) {
+  if (!prevLandmarks) { prevLandmarks = landmarks; return false; }
+
+  const dx = landmarks[0].x - prevLandmarks[0].x;
+  shakeXHistory.push(dx);
+  if (shakeXHistory.length > SHAKE_WINDOW) shakeXHistory.shift();
+
+  // Count how many times movement direction reverses
+  let reversals = 0, dir = 0;
+  for (const d of shakeXHistory) {
+    if (Math.abs(d) < SHAKE_MIN_MOVE) continue;
+    const newDir = d > 0 ? 1 : -1;
+    if (dir !== 0 && newDir !== dir) reversals++;
+    dir = newDir;
+  }
+
+  prevLandmarks = landmarks;
+  return reversals >= SHAKE_REVERSALS_NEEDED;
+}
+
+// ─── PROGRESS & AUTO-ADVANCE ──────────────────────────────────────────
+const HOLD_FRAMES = 18; // ~0.6s at 30fps to confirm gesture
+
+function onGestureDetected(isDetected) {
+  if (transitioning) return;
+
+  const isShake = gestures[currentIdx].name === 'Shake Hand';
+
+  if (isDetected) {
+    holdProgress = Math.min(100, holdProgress + (100 / HOLD_FRAMES));
+  } else {
+    // For shake, don't decay — gaps between strokes are normal
+    if (!isShake) holdProgress = Math.max(0, holdProgress - 4);
+  }
+
+  document.getElementById('detect-bar').style.width = holdProgress + '%';
+
+  if (holdProgress >= 100) {
+    transitioning = true;
+    document.getElementById('cal-instruction').textContent = '✓ Got it!';
+    document.getElementById('detect-bar').style.background = '#22c55e';
+    const wasLastStep = currentIdx === gestures.length - 1;
+
+    if (!wasLastStep) {
+      currentIdx++;
+      updateStepUI();
+      const img = document.getElementById('cal-image');
+      if (img && gestures[currentIdx].image) {
+        img.src = gestures[currentIdx].image;
+      }
+    }
+
+    setTimeout(() => {
+      if (!wasLastStep) {
+        holdProgress = 0;
+        transitioning = false;
+        prevLandmarks = null;
+        velocityHistory = [];
+        shakeXHistory = [];
+        rotationHistory = [];
+        updateGestureUI();
+      } else {
+        location.href = 'ready.html';
+      }
+    }, 600);
+  }
+}
+
+
+
+// ─── HAND TRACKING ────────────────────────────────────────────────────
+startCamera(function onResults(results) {
+  drawHandResults(results); // shared.js handles mirroring
+  if (!results.multiHandLandmarks || results.multiHandLandmarks.length === 0) {
+    onGestureDetected(false);
+    return;
+  }
+
+  // Use the first detected hand
+  const landmarks = results.multiHandLandmarks[0];
+  // Note: use raw (unmirrored) landmarks for gesture math — mirroring is visual only
+  const detected = gestures[currentIdx].detect(landmarks);
+  onGestureDetected(detected);
+});
+</script>
+
+<div class="hamburger-wrap" id="hamburgerWrap">
+  <div class="hamburger-menu">
+    <button class="hamburger-link" onclick="location.href='index.html'">home</button>
+    <button class="hamburger-link" onclick="location.href='index.html#pick'">simulations</button>
+  </div>
+  <button class="hamburger-btn" onclick="document.getElementById('hamburgerWrap').classList.toggle('open')">
+    <span></span><span></span><span></span>
+  </button>
+</div>
+</body>
+</html>

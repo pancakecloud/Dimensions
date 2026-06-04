@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gesture Guide — Physics Explorer</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: #fff;
+  font-family: 'Space Grotesk', sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── MAIN LAYOUT ── */
+.guide-layout {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;  
+  align-items: center;
+  padding: 5rem 5% 6rem;
+  gap: 4rem;
+  min-height: 100vh;
+}
+
+/* ── LEFT: sim description card ── */
+.sim-card {
+  flex: 0 0 auto;
+  width: clamp(60px, 30%, 400px);
+  border: 1.5px solid #111;
+  padding: 2.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  align-self: center;
+}
+.sim-card h2 {
+  font-size: clamp(1.4rem, 2.5vw, 2rem);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: #111;
+}
+.sim-card p {
+  font-size: 0.9rem;
+  line-height: 1.75;
+  color: #333;
+}
+
+/* ── RIGHT: gestures ── */
+.guide-right {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3rem;
+  align-items: center;
+}
+.guide-right h1 {
+  font-size: clamp(1.4rem, 2.8vw, 2.2rem);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  color: #111;
+}
+
+.gesture-icons {
+  display: flex;
+  flex-direction: row;
+  gap: 3rem;
+  
+  flex-wrap: wrap;
+  align-items: center;
+}
+.gesture-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+.gesture-box {
+  width: clamp(140px, 16vw, 200px);
+  height: clamp(140px, 16vw, 200px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.gesture-box img,
+.gesture-box svg {
+  width: 70%;
+  height: 70%;
+  object-fit: contain;
+  display: block;
+}
+/* Invert SVG strokes for dark background */
+.gesture-box svg path,
+.gesture-box svg circle,
+.gesture-box svg rect {
+  stroke: #fff !important;
+}
+.gesture-label {
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  /* text-transform: uppercase; */
+  color: #4b4b4b;
+  font-weight: 300;
+  text-align: center;
+  padding: 1rem 1rem;
+}
+
+/* ── HAMBURGER — bottom left ── */
+.hamburger-wrap {
+  position: fixed;
+  bottom: 24px; left: 10px;
+  z-index: 50;
+}
+.hamburger-btn {
+  width: 52px; height: 52px;
+  /* background: rgba(0,0,0,0.08); */
+  /* border: 1.5px solid rgba(0,0,0,0.2); */
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 5px;
+  transition: background 0.18s;
+  position: relative; z-index: 2;
+}
+/* .hamburger-btn:hover { background: rgba(0,0,0,0.14); } */
+.hamburger-btn span {
+  display: block; width: 20px; height: 2px;
+  background: #111; border-radius: 1px;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+  transform-origin: center;
+}
+/* .hamburger-wrap.open .hamburger-btn { background: rgba(0,0,0,0.12); } */
+.hamburger-wrap.open .hamburger-btn span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.hamburger-wrap.open .hamburger-btn span:nth-child(2) { opacity: 0; transform: scaleX(0); }
+.hamburger-wrap.open .hamburger-btn span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+.hamburger-menu {
+  position: absolute;
+  bottom: 0; left: 52px;
+  background: rgba(240,240,240,0.97);
+  /* border: 1.5px solid rgba(0,0,0,0.15); */
+  border-left: none;
+  display: flex; flex-direction: row; align-items: stretch;
+  overflow: hidden;
+  width: 0;
+  transition: width 0.35s cubic-bezier(0.76, 0, 0.24, 1);
+  white-space: nowrap;
+}
+.hamburger-wrap.open .hamburger-menu { width: 240px; }
+
+.hamburger-link {
+  padding: 0 28px; height: 52px;
+  font-size: 0.9rem; font-family: inherit;
+  color: rgba(0,0,0,0.65); cursor: pointer;
+  border: none; background: transparent;
+  letter-spacing: 0.04em;
+  transition: background 0.18s, color 0.18s;
+  border-left: 1px solid rgba(0,0,0,0.1);
+}
+.hamburger-link:first-child { border-left: none; }
+.hamburger-link:hover { background: rgba(0,0,0,0.06); color: #111; }
+
+/* ── NAV BUTTONS ── */
+.btn-back, .btn-next {
+  z-index: 30;
+}
+</style>
+</head>
+<body>
+
+<div class="guide-layout">
+
+  <!-- Left: sim description -->
+  <div class="sim-card">
+    <h2>Celestial Bodies</h2>
+    <p>This exploration will allow you to play God. Build your own solar systems which understanding what gravity and energy is required for different star systems and planets.</p>
+  </div>
+
+  <!-- Right: gestures -->
+  <div class="guide-right">
+    <h1>Gestures you will need:</h1>
+    <div class="gesture-icons">
+
+      <!-- Left pinch -->
+      <div class="gesture-item">
+        <div class="gesture-box">
+          <img src="illustrations/pinch-calibration.png" alt="Left pinch gesture"
+            onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+          <svg viewBox="0 0 80 80" fill="none" style="display:none;">
+            <path d="M38 32 C35 30 32 32 33 36 L35 46 C35 49 38 50 40 48 L45 40 C47 37 45 33 42 33 Z" stroke="#fff" stroke-width="1.5" fill="none"/>
+            <path d="M33 36 L31 28 C30 25 33 24 34 27" stroke="#fff" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+            <path d="M35 34 L33 26 C32 23 35 22 36 25" stroke="#fff" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+            <path d="M38 33 L37 24 C36 21 39 20 40 23" stroke="#fff" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+            <path d="M42 34 L42 26 C42 23 45 23 45 26" stroke="#fff" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <span class="gesture-label">Left Hand <br> Pinch = Gravity</span>
+      </div>
+
+      <!-- Right shake -->
+      <div class="gesture-item">
+        <div class="gesture-box">
+          <img src="illustrations/shake-hand-calibration.png" alt="Right shake gesture"
+            onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+          <svg viewBox="0 0 80 80" fill="none" style="display:none;">
+            <path d="M30 50 C26 46 24 40 26 34 L30 24 C31 21 34 22 34 25 L34 35" stroke="#fff" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+            <path d="M34 32 L34 22 C34 19 37 19 37 22 L37 35" stroke="#fff" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+            <path d="M37 30 L37 20 C37 17 40 17 40 20 L40 34" stroke="#fff" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+            <path d="M40 28 L40 22 C40 19 43 19 43 22 L43 34" stroke="#fff" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+            <path d="M30 50 L37 58 C40 62 46 60 46 56 L43 34" stroke="#fff" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+            <path d="M16 38 L12 36 M17 44 L12 44 M16 50 L12 52" stroke="#fff" stroke-width="1.2" stroke-linecap="round" opacity="0.6"/>
+            <path d="M52 34 L57 32 M52 40 L58 40 M52 46 L57 48" stroke="#fff" stroke-width="1.2" stroke-linecap="round" opacity="0.6"/>
+          </svg>
+        </div>
+        <span class="gesture-label">Right Hand <br> Shake = Energy</span>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<a href="calibration.html" style="position:fixed;bottom:24px;right:24px;z-index:50;padding:12px 32px;background:#aaa;color:#fff;font-family:inherit;font-size:0.95rem;letter-spacing:0.04em;border:none;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;">Okay</a>
+
+<!-- Hamburger menu (light version for white page) -->
+<div class="hamburger-wrap" id="hamburgerWrap">  <div class="hamburger-menu" id="hamburgerMenu">
+    <button class="hamburger-link" onclick="location.href='index.html'">home</button>
+    <button class="hamburger-link" onclick="location.href='index.html#pick'">simulations</button>
+  </div>
+  <button class="hamburger-btn" onclick="toggleMenu()">
+    <span></span><span></span><span></span>
+  </button>
+</div>
+
+<script src="shared.js"></script>
+<script>
+injectFlash();
+function toggleMenu() {
+  document.getElementById('hamburgerWrap').classList.toggle('open');
+}
+</script>
+</body>
+</html>
