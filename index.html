@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>(in)tangible variables</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth;}
+::-webkit-scrollbar { display: none; }
+
+body {
+  background: #000;
+  font-family: 'Space Grotesk', sans-serif;
+  color: #111;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* ── SIM PICKER ── */
+.pick-layer {
+  position: fixed; inset: 0;
+  display: flex; flex-direction: column; justify-content: center;
+  z-index: 1; gap: 2.5rem; padding: 0;
+}
+.pick-header {
+  display: flex; align-items: center; gap: 2rem; padding: 0 4rem;
+}
+.pick-title {
+  font-size: clamp(1.4rem, 3vw, 2.2rem); font-weight: 400;
+  letter-spacing: 0.06em; text-transform: uppercase; color: #fff;
+  white-space: nowrap; flex-shrink: 0;
+}
+.pick-search {
+  flex: 1; display: flex; align-items: center; background: #fff;
+  padding: 10px 18px; gap: 10px; max-width: 700px;
+}
+.pick-search svg { flex-shrink: 0; opacity: 0.5; }
+.pick-search input {
+  border: none; outline: none; background: transparent;
+  font-family: inherit; font-size: 0.95rem; color: #111; width: 100%;
+}
+.pick-search input::placeholder { color: #aaa; }
+
+/* Sim picker hamburger — only shown when curtain is pulled down */
+.hamburger-wrap {
+  position: fixed; bottom: 24px; left: 10px; z-index: 5; display: none;
+}
+.hamburger-btn {
+  width: 52px; height: 52px;
+  background: rgba(255,255,255,0.10); border: 1.5px solid rgba(255,255,255,0.2);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 5px; transition: background 0.18s; position: relative; z-index: 2;
+}
+.hamburger-btn:hover { background: rgba(255,255,255,0.18); }
+.hamburger-btn span {
+  display: block; width: 20px; height: 2px; background: #fff; border-radius: 1px;
+  transition: transform 0.3s ease, opacity 0.3s ease; transform-origin: center;
+}
+.hamburger-wrap.open .hamburger-btn span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.hamburger-wrap.open .hamburger-btn span:nth-child(2) { opacity: 0; transform: scaleX(0); }
+.hamburger-wrap.open .hamburger-btn span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+.hamburger-menu {
+  position: absolute; bottom: 0; left: 52px;
+  background: rgba(40,40,40,0.97);
+  display: flex; flex-direction: row; align-items: stretch;
+  overflow: hidden; width: 0;
+  transition: width 0.35s cubic-bezier(0.76, 0, 0.24, 1); white-space: nowrap;
+}
+.hamburger-wrap.open .hamburger-menu { width: 240px; }
+.hamburger-links { display: flex; flex-direction: row; align-items: stretch; }
+.hamburger-link {
+  padding: 0 28px; height: 52px; font-size: 0.9rem; font-family: inherit;
+  color: rgba(255,255,255,0.7); cursor: pointer; border: none; background: transparent;
+  letter-spacing: 0.04em; transition: background 0.18s, color 0.18s;
+  border-left: 1px solid rgba(255,255,255,0.1);
+}
+.hamburger-link:hover { background: rgba(255,255,255,0.08); color: #fff; }
+
+/* Sim cards */
+.sim-cards {
+  display: flex; flex-direction: row; flex-wrap: nowrap; gap: 2rem;
+  overflow-x: auto; overflow-y: hidden; padding: 0 2rem 1rem 4rem; margin: 2%;
+  scroll-snap-type: x mandatory; width: 100%; scrollbar-width: none;
+  touch-action: pan-x; -webkit-overflow-scrolling: touch;
+}
+.sim-cards::-webkit-scrollbar { display: none; }
+.sim-card { display: flex; flex-direction: column; align-items: center; gap: 1rem; cursor: pointer; flex: 0 0 auto; scroll-snap-align: start; }
+.sim-card-box {
+  width: clamp(200px, 22vw, 330px); height: clamp(200px, 22vw, 330px);
+  background: var(--pink); border-radius: 12px;
+  transition: transform 0.2s, box-shadow 0.2s;
+  display: flex; align-items: center; justify-content: center;
+}
+.sim-card:hover .sim-card-box { transform: translateY(-2px); box-shadow: 0 16px 40px rgba(255,255,255,0.4); }
+.sim-card-label {
+  border: 1.5px solid var(--pink); color: var(--pink);
+  padding: 8px 24px; font-size: 0.95rem; background: transparent;
+  font-family: inherit; cursor: pointer; transition: background 0.18s, color 0.18s;
+}
+.sim-card:hover .sim-card-label { background: var(white); color: black; }
+.sim-card.locked { cursor: default; }
+.sim-card.locked .sim-card-box { background: #1a1a1a; border: 1.5px solid #333; }
+.sim-card.locked:hover .sim-card-box { transform: none; box-shadow: none; }
+.sim-card.locked .sim-card-label { border-color: #444; color: #444; cursor: default; }
+.sim-card.locked:hover .sim-card-label { background: transparent; color: #444; }
+.lock-icon { opacity: 0.35; }
+.lock-icon svg { width: 48px; height: 48px; }
+
+.btn-back {
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.4s ease 0.5s;
+  border-color: rgba(255,255,255,0.3); color: rgba(255,255,255,0.5);
+}
+.btn-back:hover { background: rgba(255,255,255,0.1); color: #fff; border-color: #fff; }
+body.pulled .btn-back { opacity: 1; pointer-events: all; }
+
+/* ── WHITE CURTAIN ── */
+.curtain {
+  position: fixed; top: 90px; left: 0; right: 0; bottom: 0;
+  background: #fff; z-index: 10; pointer-events: all;
+  transition: transform 0.85s cubic-bezier(0.76, 0, 0.24, 1); overflow: visible;
+}
+.curtain.pull-down { transform: translateY(110%); }
+
+.fingers {
+  position: absolute; top: -88px; left: 50%; transform: translateX(-50%);
+  z-index: 2; pointer-events: none;
+}
+.fingers svg { width: clamp(300px, 44vw, 540px); height: auto; display: block; }
+
+/* ── LANDING ── */
+.landing {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; background: #fff; overflow-y: auto;
+}
+.landing-hero {
+  flex: 0 0 100vh; display: flex; align-items: center;
+  top: -50px; padding: 0 8%; position: relative;
+}
+.landing-left {
+  flex: 1; display: flex; flex-direction: column; gap: 2.2rem;
+}
+.landing-title {
+  font-size: clamp(2.2rem, 4.8vw, 4rem); font-weight: 400;
+  line-height: 1.15; letter-spacing: -0.025em; color: #111;
+}
+.btn-explore-sims {
+  display: inline-flex; align-items: center;
+  border: 1.5px solid #111; padding: 11px 28px;
+  font-size: 1rem; font-family: inherit; background: transparent;
+  cursor: pointer; border-radius: 100px; color: #111;
+  transition: background 0.18s, color 0.18s; width: fit-content;
+}
+.btn-explore-sims:hover { background: #111; color: #fff; }
+.landing-right {
+  flex: 0 0 auto; width: clamp(260px, 42%, 520px); height: 100%;
+  display: flex; align-items: center; justify-content: center;
+}
+.landing-right svg { width: 100%; max-height: 440px; }
+
+/* Tabs section */
+.tabs-section { background: #111; flex-shrink: 0; }
+.tabs-content { background: #fff; padding: 3rem 3rem 5rem; }
+.tab-pane { display: none; }
+.tab-pane.active { display: block; }
+
+/* About */
+.about-intro { font-size: 0.95rem; line-height: 1.8; text-align: center; max-width: 640px; margin: 0 auto 2.5rem; color: #333; }
+.about-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+.about-card { border: 1.5px solid #ddd; padding: 1.5rem; }
+.about-card h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.8rem; }
+.about-card p  { font-size: 0.85rem; line-height: 1.7; color: #444; }
+.about-card a  { color: #e8197d; font-weight: 600; font-style: italic; }
+.how-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: start; }
+.how-steps { display: flex; flex-direction: column; gap: 1.4rem; }
+.how-step h4 { font-size: 0.9rem; font-weight: 700; margin-bottom: 0.3rem; }
+.how-step p  { font-size: 0.85rem; line-height: 1.6; color: #444; }
+.how-closing { margin-top: 1.5rem; font-size: 0.9rem; font-style: italic; font-weight: 500; }
+.imp-note { border: 1.5px solid #111; padding: 1.5rem; text-align: center; }
+.imp-note h4 { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 1rem; }
+.imp-note p  { font-size: 0.85rem; line-height: 1.7; color: #333; }
+.profile-panel { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3rem; gap: 2rem; text-align: center; }
+.profile-explain { max-width: 600px; font-size: 0.95rem; line-height: 1.8; color: #444; }
+.profile-login-box { border: 1.5px solid #111; padding: 1.5rem 2.5rem; font-size: 0.95rem; text-align: center; }
+.profile-login-box a { color: #111; font-weight: 600; }
+
+/* Scroll arrow */
+@keyframes bounce-arrow {
+  0%, 100% { transform: translateX(-50%) translateY(0); }
+  50%       { transform: translateX(-50%) translateY(8px); }
+}
+#scroll-arrow { animation: bounce-arrow 1.4s ease-in-out infinite; }
+
+/* ── LANDING HAMBURGER — only shown when curtain is visible ── */
+.landing-hamburger-wrap {
+  position: fixed; bottom: 24px; left: 10px; z-index: 200; pointer-events: all;
+  display: block; /* visible by default on landing page */
+}
+.landing-hamburger-btn {
+  width: 52px; height: 52px;
+  background: rgba(0,0,0,0.07); border: 1.5px solid rgba(0,0,0,0.18);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 5px; transition: background 0.18s; position: relative; z-index: 2;
+}
+.landing-hamburger-btn:hover { background: rgba(0,0,0,0.13); }
+.landing-hamburger-btn span {
+  display: block; width: 20px; height: 2px; background: #111; border-radius: 1px;
+  transition: transform 0.3s ease, opacity 0.3s ease; transform-origin: center;
+}
+.landing-hamburger-wrap.open .landing-hamburger-btn span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.landing-hamburger-wrap.open .landing-hamburger-btn span:nth-child(2) { opacity: 0; transform: scaleX(0); }
+.landing-hamburger-wrap.open .landing-hamburger-btn span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+.landing-hamburger-menu {
+  position: absolute; bottom: 0; left: 52px;
+  background: rgba(20,20,20,0.96);
+  display: flex; flex-direction: row; align-items: stretch;
+  overflow: hidden; width: 0;
+  transition: width 0.35s cubic-bezier(0.76, 0, 0.24, 1); white-space: nowrap;
+}
+.landing-hamburger-wrap.open .landing-hamburger-menu { width: 380px; }
+.landing-hamburger-link {
+  padding: 0 28px; height: 52px; font-size: 0.9rem; font-family: inherit;
+  color: rgba(255,255,255,0.7); cursor: pointer; border: none; background: transparent;
+  letter-spacing: 0.04em; transition: background 0.18s, color 0.18s;
+  border-left: 1px solid rgba(255,255,255,0.1);
+}
+.landing-hamburger-link:first-child { border-left: none; }
+.landing-hamburger-link:hover { background: rgba(255,255,255,0.08); color: #fff; }
+</style>
+</head>
+<body>
+
+<!-- ── SIM PICKER ── -->
+<div class="pick-layer">
+  <div class="pick-header">
+    <div class="pick-title">Pick Simulation</div>
+    <div class="pick-search">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input type="text" placeholder="Search Simulation here..." oninput="filterSims(this.value)"/>
+    </div>
+  </div>
+  <div class="sim-cards" id="simCards">
+    <div class="sim-card" onclick="pick('Celestial Bodies')">
+      <div class="sim-card-box" style="background:#fff;border:1.5px solid #333;"></div>
+      <div class="sim-card-label" style="border-color:#fff;color:#fff;">Celestial Bodies</div>
+    </div>
+    <div class="sim-card locked"><div class="sim-card-box"><div class="lock-icon"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="11" width="18" height="11" rx="2" stroke="white" stroke-width="1.5"/><path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="white" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="16" r="1.5" fill="white"/></svg></div></div><div class="sim-card-label">Electricity</div></div>
+    <div class="sim-card locked"><div class="sim-card-box"><div class="lock-icon"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="11" width="18" height="11" rx="2" stroke="white" stroke-width="1.5"/><path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="white" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="16" r="1.5" fill="white"/></svg></div></div><div class="sim-card-label">Waves</div></div>
+    <div class="sim-card locked"><div class="sim-card-box"><div class="lock-icon"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="11" width="18" height="11" rx="2" stroke="white" stroke-width="1.5"/><path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="white" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="16" r="1.5" fill="white"/></svg></div></div><div class="sim-card-label">Optics</div></div>
+    <div class="sim-card locked"><div class="sim-card-box"><div class="lock-icon"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="11" width="18" height="11" rx="2" stroke="white" stroke-width="1.5"/><path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="white" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="16" r="1.5" fill="white"/></svg></div></div><div class="sim-card-label">Magnetism</div></div>
+    <div class="sim-card locked"><div class="sim-card-box"><div class="lock-icon"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="11" width="18" height="11" rx="2" stroke="white" stroke-width="1.5"/><path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="white" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="16" r="1.5" fill="white"/></svg></div></div><div class="sim-card-label">Thermodynamics</div></div>
+    <div class="sim-card locked"><div class="sim-card-box"><div class="lock-icon"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="11" width="18" height="11" rx="2" stroke="white" stroke-width="1.5"/><path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="white" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="16" r="1.5" fill="white"/></svg></div></div><div class="sim-card-label">Quantum</div></div>
+    <div class="sim-card locked"><div class="sim-card-box"><div class="lock-icon"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="11" width="18" height="11" rx="2" stroke="white" stroke-width="1.5"/><path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="white" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="16" r="1.5" fill="white"/></svg></div></div><div class="sim-card-label">Motion</div></div>
+  </div>
+</div>
+
+<!-- Sim picker hamburger — only visible when curtain is pulled -->
+<div class="hamburger-wrap" id="hamburgerWrap">
+  <div class="hamburger-menu" id="hamburgerMenu">
+    <div class="hamburger-links">
+      <button class="hamburger-link" onclick="goHome()">home</button>
+      <button class="hamburger-link">profile</button>
+    </div>
+  </div>
+  <button class="hamburger-btn" onclick="toggleMenu()">
+    <span></span><span></span><span></span>
+  </button>
+</div>
+
+<!-- ── WHITE CURTAIN ── -->
+<div class="curtain" id="curtain">
+
+  <div class="fingers">
+    <svg id="Layer_1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 162.63 57.41">
+      <circle cx="137.82" cy="26.2" r="12.57" fill="#fff" stroke="#010101" stroke-miterlimit="10" stroke-width="1"/>
+      <rect x="14.62" y="10.45" width="26.76" height="31.61" rx="13.38" ry="13.38" transform="translate(-4.21 5.38) rotate(-10.21)" fill="#fff" stroke="#010101" stroke-miterlimit="10" stroke-width="1"/>
+      <rect x="41.55" y="10.28" width="26.76" height="34.73" rx="13.38" ry="13.38" fill="#fff" stroke="#010101" stroke-miterlimit="10" stroke-width="1"/>
+      <rect x="68.1" y="10.28" width="26.76" height="36.44" rx="13.38" ry="13.38" fill="#fff" stroke="#010101" stroke-miterlimit="10" stroke-width="1"/>
+      <rect x="95.31" y="10.46" width="26.76" height="36.09" rx="13.38" ry="13.38" transform="translate(4.89 -14.52) rotate(7.82)" fill="#fff" stroke="#010101" stroke-miterlimit="10" stroke-width="1"/>
+    </svg>
+  </div>
+
+  <div class="landing">
+    <div class="landing-hero">
+      <div class="landing-left">
+        <h1 class="landing-title">Enactive simulation<br>for Physics</h1>
+        <button class="btn-explore-sims" onclick="pullDown()">Explore Sims</button>
+      </div>
+      <div class="landing-right">
+        <img src="illustrations/landing_1.png" alt="Graphic">
+      </div>
+      <!-- Bouncy scroll arrow -->
+      <div id="scroll-arrow" style="position:absolute;bottom:84px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;pointer-events:none;transition:opacity 0.4s;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 5v14M5 12l7 7 7-7"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="tabs-section">
+      <div class="tabs-content">
+        <div class="tab-pane active" id="pane-about">
+          <p class="about-intro">This website brings together embodied learning research, gesture-based interaction, and playful exploration to transform how students experience physics. By turning hand movements into forces, waves, and electrical behaviour, the platform makes abstract concepts intuitive. Students discover principles through motion, experimentation, and real-time feedback.</p>
+          <div class="about-grid">
+            <div class="about-card"><h3>What this platform is</h3><p>This is a physics playground built for students who learn best by moving, testing, and trying things out. Instead of reading formulas or watching diagrams, you use your hands to build circuits, shape waves, and push forces around. Your gestures become the tools, and the science responds in real time.</p></div>
+            <div class="about-card"><h3>Why we built it</h3><p>Traditional physics learning often feels distant: lots of symbols, not enough experience. But physics is fundamentally about movement, energy, and interaction, things your body already understands. This platform brings those ideas to life by letting you explore them physically.</p></div>
+            <div class="about-card"><h3>Why it matters</h3><p>Research in enactive cognition shows that movement supports deeper understanding, especially in STEM subjects. My platform uses this principle to help students build intuition through exploration, experimentation, and play.<br><a href="#">Read my research here!</a></p></div>
+            <div class="about-card"><h3>Our vision</h3><p>To make physics accessible, engaging, and meaningful, not through memorisation, but through direct interaction with the ideas themselves.</p></div>
+          </div>
+        </div>
+        <div class="tab-pane" id="pane-howto">
+          <div class="how-grid">
+            <div>
+              <h2 style="font-size:1.5rem;font-weight:700;margin-bottom:1.5rem;">How it works</h2>
+              <div class="how-steps">
+                <div class="how-step"><h4>01 — Pick a topic</h4><p>Choose the physics world you want to explore.</p></div>
+                <div class="how-step"><h4>02 — Learn the gestures</h4><p>Before you begin, you'll see the hand gestures you'll use for that topic.</p></div>
+                <div class="how-step"><h4>03 — Try the gestures</h4><p>Pay attention to how each gesture feels. Move slowly, move quickly, try different angles.</p></div>
+                <div class="how-step"><h4>04 — Explore and compare</h4><p>Experiment freely. Notice how much you need to move to cause each effect.</p></div>
+              </div>
+              <p class="how-closing">Your body becomes the way you understand the physics.</p>
+            </div>
+            <div class="imp-note">
+              <h4>IMP NOTE</h4>
+              <p>Each gesture controls a variable and the extent you do the gesture controls the value.<br><br>For example: Gravity is controlled using pinch — the looser the pinch, the lesser the gravity being applied!</p>
+            </div>
+          </div>
+        </div>
+        <div class="tab-pane" id="pane-profile">
+          <div class="profile-panel">
+            <div class="profile-explain"><p>The Student Dashboard acts as a personalised hub where students can access and manage their learning journey. <br> All saved experiments, progress, completed activities, and collected resources are stored here, <br> allowing students to revisit previous explorations, track their development over time, and continue learning at their own pace.</p></div>
+            <div class="profile-login-box">Please <a href="#">Login</a> or <a href="#">Create an account</a></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── LANDING HAMBURGER — tabs nav, only on white landing page ── -->
+<div class="landing-hamburger-wrap open" id="landingHamburger">
+  <div class="landing-hamburger-menu" id="landingMenu">
+    <button class="landing-hamburger-link" onclick="switchTabAndScroll('about')">About</button>
+    <button class="landing-hamburger-link" onclick="switchTabAndScroll('howto')">How to Use</button>
+    <button class="landing-hamburger-link" onclick="switchTabAndScroll('profile')">Profile</button>
+  </div>
+  <button class="landing-hamburger-btn" onclick="toggleLandingMenu()">
+    <span></span><span></span><span></span>
+  </button>
+</div>
+
+<script src="shared.js"></script>
+<script>
+injectFlash();
+
+function pullDown() {
+  document.body.classList.add('pulled');
+  document.getElementById('curtain').classList.add('pull-down');
+  // Show sim picker hamburger, hide landing hamburger
+  document.getElementById('hamburgerWrap').style.display = 'block';
+  document.getElementById('landingHamburger').style.display = 'none';
+}
+
+function closePick(e) {
+  if (e) e.preventDefault();
+  document.body.classList.remove('pulled');
+  document.getElementById('curtain').classList.remove('pull-down');
+  // Hide sim picker hamburger, show landing hamburger
+  document.getElementById('hamburgerWrap').style.display = 'none';
+  document.getElementById('hamburgerWrap').classList.remove('open');
+  document.getElementById('landingHamburger').style.display = 'block';
+}
+
+function goHome() { closePick(); }
+function toggleMenu() { document.getElementById('hamburgerWrap').classList.toggle('open'); }
+function toggleLandingMenu() { document.getElementById('landingHamburger').classList.toggle('open'); }
+
+function switchTabAndScroll(id) {
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.getElementById('pane-' + id).classList.add('active');
+  document.querySelector('.tabs-section').scrollIntoView({ behavior: 'smooth' });
+}
+
+function filterSims(val) {
+  const q = val.toLowerCase();
+  document.querySelectorAll('.sim-card').forEach(card => {
+    const label = card.querySelector('.sim-card-label').textContent.toLowerCase();
+    card.style.display = label.includes(q) ? 'flex' : 'none';
+  });
+}
+
+function pick(name) {
+  setState({ sim: name });
+  location.href = 'gesture-guide.html';
+}
+
+if (location.hash === '#pick') pullDown();
+
+// Hide scroll arrow once user scrolls
+const landing = document.querySelector('.landing');
+if (landing) {
+  landing.addEventListener('scroll', function() {
+    const arrow = document.getElementById('scroll-arrow');
+    if (arrow) arrow.style.opacity = landing.scrollTop > 40 ? '0' : '1';
+  }, { passive: true });
+}
+</script>
+</body>
+</html>
