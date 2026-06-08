@@ -196,7 +196,7 @@ body.pulled .btn-back { opacity: 1; pointer-events: all; }
 /* ── LANDING HAMBURGER — only shown when curtain is visible ── */
 .landing-hamburger-wrap {
   position: fixed; bottom: 24px; left: 10px; z-index: 200; pointer-events: all;
-  display: block; /* visible by default on landing page */
+  display: block;
 }
 .landing-hamburger-btn {
   width: 52px; height: 52px;
@@ -243,7 +243,8 @@ body.pulled .btn-back { opacity: 1; pointer-events: all; }
   </div>
   <div class="sim-cards" id="simCards">
     <div class="sim-card" onclick="pick('Celestial Bodies')">
-      <div class="sim-card-box" style="background:#fff;border:1.5px solid #333;"></div>
+      <div class="sim-card-box" style="background:#fff;border:1.5px solid #333;">
+        <img src="illustrations/cover.png" alt="Celestial Bodies" style="width:100%;height:100%;object-fit:cover;border-radius:12px;"></div>
       <div class="sim-card-label" style="border-color:#fff;color:#fff;">Celestial Bodies</div>
     </div>
     <div class="sim-card locked"><div class="sim-card-box"><div class="lock-icon"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="11" width="18" height="11" rx="2" stroke="white" stroke-width="1.5"/><path d="M7 11V7a5 5 0 0 1 10 0v4" stroke="white" stroke-width="1.5" stroke-linecap="round"/><circle cx="12" cy="16" r="1.5" fill="white"/></svg></div></div><div class="sim-card-label">Electricity</div></div>
@@ -271,6 +272,9 @@ body.pulled .btn-back { opacity: 1; pointer-events: all; }
 
 <!-- ── WHITE CURTAIN ── -->
 <div class="curtain" id="curtain">
+
+  <!-- Site name top left -->
+  <div style="position:absolute;top:22px;left:28px;font-family:'Space Grotesk',sans-serif;font-size:2rem;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:#111;z-index:3;pointer-events:none;">Dimensions</div>
 
   <div class="fingers">
     <svg id="Layer_1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 162.63 57.41">
@@ -358,7 +362,6 @@ injectFlash();
 function pullDown() {
   document.body.classList.add('pulled');
   document.getElementById('curtain').classList.add('pull-down');
-  // Show sim picker hamburger, hide landing hamburger
   document.getElementById('hamburgerWrap').style.display = 'block';
   document.getElementById('landingHamburger').style.display = 'none';
 }
@@ -367,7 +370,6 @@ function closePick(e) {
   if (e) e.preventDefault();
   document.body.classList.remove('pulled');
   document.getElementById('curtain').classList.remove('pull-down');
-  // Hide sim picker hamburger, show landing hamburger
   document.getElementById('hamburgerWrap').style.display = 'none';
   document.getElementById('hamburgerWrap').classList.remove('open');
   document.getElementById('landingHamburger').style.display = 'block';
@@ -398,7 +400,6 @@ function pick(name) {
 
 if (location.hash === '#pick') pullDown();
 
-// Hide scroll arrow once user scrolls
 const landing = document.querySelector('.landing');
 if (landing) {
   landing.addEventListener('scroll', function() {
