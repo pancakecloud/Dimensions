@@ -162,7 +162,7 @@ body.pulled .btn-back { opacity: 1; pointer-events: all; }
 
 /* Tabs section */
 .tabs-section { background: #111; flex-shrink: 0; }
-.tabs-content { background: #fff; padding: 3rem 3rem 6.5rem; }
+.tabs-content { background: #fff; padding: 3rem 3rem 5rem; }
 .tab-pane { display: none; }
 .tab-pane.active { display: block; }
 
@@ -192,22 +192,6 @@ body.pulled .btn-back { opacity: 1; pointer-events: all; }
   50%       { transform: translateX(-50%) translateY(8px); }
 }
 #scroll-arrow { animation: bounce-arrow 1.4s ease-in-out infinite; }
-
-/* Wave rotation animation */
-@keyframes wave-hand {
-  0%   { transform: rotate(-18deg); }
-  50%  { transform: rotate(18deg); }
-  100% { transform: rotate(-18deg); }
-}
-#wave-img {
-  transform-origin: bottom center;
-  animation: wave-hand 1.2s ease-in-out infinite;
-}
-
-/* Pinch/open — instant swap, no fade */
-#pinch-img {
-  transition: none;
-}
 
 /* ── LANDING HAMBURGER — only shown when curtain is visible ── */
 .landing-hamburger-wrap {
@@ -308,12 +292,8 @@ body.pulled .btn-back { opacity: 1; pointer-events: all; }
         <h1 class="landing-title">Enactive simulation<br>for Physics</h1>
         <button class="btn-explore-sims" onclick="pullDown()">Explore Sims</button>
       </div>
-      <!-- Two animated illustrations diagonal -->
-      <div class="landing-right" style="position:relative;">
-        <img id="wave-img" src="illustrations/wave.png" alt="Wave gesture"
-          style="position:absolute;bottom:25%;left:45%;width:48%;object-fit:contain;">
-        <img id="pinch-img" src="illustrations/pinch.png" alt="Pinch gesture"
-          style="position:absolute;top:25%;right:50%;width:48%;object-fit:contain;">
+      <div class="landing-right">
+        <img src="illustrations/landing_1.png" alt="Graphic">
       </div>
       <!-- Bouncy scroll arrow -->
       <div id="scroll-arrow" style="position:absolute;bottom:84px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;pointer-events:none;transition:opacity 0.4s;">
@@ -427,14 +407,8 @@ if (landing) {
     if (arrow) arrow.style.opacity = landing.scrollTop > 40 ? '0' : '1';
   }, { passive: true });
 }
-
-// Toggle pinch/open illustration
-let pinchOpen = false;
-setInterval(() => {
-  pinchOpen = !pinchOpen;
-  const img = document.getElementById('pinch-img');
-  if (img) img.src = pinchOpen ? 'illustrations/open.png' : 'illustrations/pinch.png';
-}, 700);
 </script>
 </body>
 </html>
+
+

@@ -45,6 +45,10 @@
     font-weight: 500;
   }
 
+  p {
+  white-space: pre-line;
+  }
+
   /* Gesture image */
   .cal-image-box {
     width: clamp(180px, 26vw, 280px);
@@ -106,7 +110,7 @@
   p.calibration-note {
     font-size: 0.9rem;
     text-align: center;
-    max-width: 420px;
+    max-width: 360px;
     line-height: 1.6;
     color: #555;
     margin-top: 0.8rem;
@@ -171,7 +175,7 @@
   transition: width 0.35s cubic-bezier(0.76, 0, 0.24, 1);
   white-space: nowrap;
 }
-.hamburger-wrap.open .hamburger-menu { width: 240px; }
+.hamburger-wrap.open .hamburger-menu { width: fit-content; }
 
 .hamburger-link {
   padding: 0 28px; height: 52px;
@@ -212,12 +216,12 @@
     </div>
 
     <!-- Instruction + progress -->
-    <p id="cal-instruction">Bring your thumb and index finger together</p>
+    <p id="cal-instruction">Left Hand: <br> Bring your thumb and index finger together. Keep them close together.</p>
     <div id="detect-bar-wrap">
       <div id="detect-bar"></div>
     </div>
 
-    <p class="calibration-note">Use your left hand for pinch to generate gravity and choose where to form the celestial body, then use your right hand to shake and increase turbulence within the molecular cloud.</p>
+    <p class="calibration-note">The extent of the gesture determines the magnitude of impact. <br> <strong>Full pinch = high gravity.<br> Fast shake = high turbulence.</strong></p>
 
   </div>
 </div>
@@ -231,13 +235,13 @@ injectFlash();
 const gestures = [
   {
     name: 'Pinch',
-    instruction: 'Bring your thumb and index finger together',
+    instruction: 'Left Hand: \n Bring your thumb and index finger together. Keep them close together.',
     detect: detectPinch,
     image: 'illustrations/pinch-calibration.png',
   },
   {
     name: 'Shake Hand',
-    instruction: 'Shake your hand side to side quickly',
+    instruction: 'Right Hand: \n Shake your hand side to side quickly',
     detect: detectShake,
     image: 'illustrations/shake-hand-calibration.png',
   },

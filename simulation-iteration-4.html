@@ -104,7 +104,9 @@ body { background: #000; overflow: hidden; }
   position: fixed; inset: 0; z-index: 100;
   pointer-events: all;
   transition: opacity 0.5s ease;
+  display: none;
 }
+#tour-overlay.visible { display: block; }
 #tour-overlay.hidden { opacity: 0; pointer-events: none; }
 
 #tour-mask {
@@ -161,7 +163,7 @@ body { background: #000; overflow: hidden; }
 .btn-back::before { content: '←'; font-size: 1.1rem; }
 /* ── HAMBURGER MENU ── */
 .sim-hamburger-wrap {
-  position: fixed; bottom: 24px; left: 0; z-index: 50;
+  position: fixed; bottom: 24px; left: 10px; z-index: 50;
 }
 .sim-hamburger-btn {
   width: 52px; height: 52px;
@@ -184,7 +186,7 @@ body { background: #000; overflow: hidden; }
   overflow: hidden; width: 0;
   transition: width 0.35s cubic-bezier(0.76, 0, 0.24, 1); white-space: nowrap;
 }
-.sim-hamburger-wrap.open .sim-hamburger-menu { width: 420px; }
+.sim-hamburger-wrap.open .sim-hamburger-menu { width: fit-content; }
 .sim-hamburger-link {
   padding: 0 24px; height: 52px; font-size: 0.88rem; font-family: 'Space Grotesk', sans-serif;
   color: rgba(255,255,255,0.7); cursor: pointer; border: none; background: transparent;
@@ -194,9 +196,89 @@ body { background: #000; overflow: hidden; }
 .sim-hamburger-link:first-child { border-left: none; }
 .sim-hamburger-link:hover { background: rgba(255,255,255,0.08); color: #fff; }
 .sim-hamburger-link.muted { color: rgba(232,25,125,0.8); }
+
+/* ── LIGHT MODE ── */
+body.light-mode { background: #f5f5f0; }
+body.light-mode #sim-prompt {
+  background: linear-gradient(135deg, #e8197d 0%, #c4005f 100%);
+}
+/* White fill, thin black border for all UI panels */
+body.light-mode #legend,
+body.light-mode #param-panel,
+body.light-mode #sim-title {
+  background: #fff !important;
+  border: 1px solid #111 !important;
+  color: #111;
+}
+body.light-mode .legend-row,
+body.light-mode .param-name,
+body.light-mode .param-value { color: #222; }
+body.light-mode .param-bar-wrap { background: rgba(0,0,0,0.12); }
+body.light-mode .param-bar { background: rgba(0,0,0,0.5); }
+/* Black cosmic time text */
+body.light-mode .clock-val { color: #111; }
+body.light-mode .clock-unit { color: rgba(0,0,0,0.5); }
+body.light-mode .ann-name { color: rgba(0,0,0,0.45); }
+body.light-mode .stamp-name { color: rgba(0,0,0,0.35); }
+body.light-mode .sim-hamburger-btn {
+  background: rgba(0,0,0,0.08);
+  border-color: rgba(0,0,0,0.2);
+}
+body.light-mode .sim-hamburger-btn span { background: #111; }
+body.light-mode .sim-hamburger-menu { background: rgba(240,240,240,0.97); }
+body.light-mode .sim-hamburger-link { color: rgba(0,0,0,0.7); border-left-color: rgba(0,0,0,0.1); }
+body.light-mode .sim-hamburger-link:hover { background: rgba(0,0,0,0.06); color: #111; }
+body.light-mode .sim-hamburger-link.muted { color: #e8197d; }
+body.light-mode .hand-guide path { stroke: #333; }
+body.light-mode .btn-back { border-color: rgba(0,0,0,0.2); color: rgba(0,0,0,0.5); }
+
+/* Mode toggle button */
+#mode-toggle {
+  position: fixed;
+  top: 208px; right: 22px;
+  z-index: 20;
+  width: 52px; height: 26px;
+  cursor: pointer;
+  display: flex; align-items: center;
+  font-family: 'Space Grotesk', sans-serif;
+}
+#mode-toggle-track {
+  width: 44px; height: 22px;
+  border-radius: 11px;
+  background: rgba(255,255,255,0.2);
+  border: 1.5px solid rgba(255,255,255,0.35);
+  position: relative;
+  transition: background 0.3s, border-color 0.3s;
+  flex-shrink: 0;
+}
+body.light-mode #mode-toggle-track {
+  background: rgba(0,0,0,0.12);
+  border-color: rgba(0,0,0,0.25);
+}
+#mode-toggle-thumb {
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  position: absolute;
+  top: 2px; left: 2px;
+  transition: transform 0.3s cubic-bezier(0.76,0,0.24,1), background 0.3s;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+}
+body.light-mode #mode-toggle-thumb {
+  transform: translateX(22px);
+  background: #111;
+}
+#mode-toggle-icon {
+  font-size: 11px;
+  margin-left: 6px;
+  color: rgba(255,255,255,0.6);
+  transition: color 0.3s;
+  user-select: none;
+}
+body.light-mode #mode-toggle-icon { color: rgba(0,0,0,0.5); }
 </style>
 </head>
-<body>
+<body class="light-mode">
 <canvas id="sim-canvas"></canvas>
 <canvas id="hand-overlay"></canvas>
 <video id="video-src" autoplay muted playsinline></video>
@@ -244,8 +326,17 @@ body { background: #000; overflow: hidden; }
 </div>
 
 <!-- Buttons -->
-<button class="btn-pink ui" id="btn-explore" onclick="enterFreeplay()" style="display:none;">Start exploring!</button>
+<!-- <button class="btn-pink ui" id="btn-explore" onclick="enterFreeplay()" style="display:none;">Start exploring!</button> -->
 <button class="btn-pink ui" id="btn-reset" onclick="resetSim()">Reset</button>
+
+<!-- Light/Dark mode toggle -->
+<div id="mode-toggle" onclick="toggleMode()" title="Toggle light/dark mode">
+  <div id="mode-toggle-track">
+    <div id="mode-toggle-thumb"></div>
+  </div>
+  <span id="mode-toggle-icon">☽</span>
+</div>
+
 
 <!-- Clock -->
 <div class="ui" id="clock">
@@ -265,12 +356,6 @@ body { background: #000; overflow: hidden; }
 </div>
 
 <!-- Hand guides -->
-<div class="ui hand-guide" id="guide-left">
-  <svg width="100" height="130" viewBox="0 0 140 170" fill="none">
-    <path d="M70 160 C46 160 30 142 28 120 L24 74 C23 68 28 64 33 66 L33 52 C33 44 40 42 44 48 L45 58 L45 36 C45 28 52 26 55 32 L55 58 L55 32 C55 24 62 22 65 28 L65 58 L65 36 C65 28 72 28 72 36 L72 58 C74 52 79 49 84 52 L88 74 C94 86 92 108 86 120 C82 128 76 136 70 160Z"
-      stroke="white" stroke-width="1.5" fill="none" stroke-dasharray="4 4"/>
-  </svg>
-</div>
 <div class="ui hand-guide" id="guide-right">
   <svg width="100" height="130" viewBox="0 0 140 170" fill="none">
     <path d="M70 160 C46 160 30 142 28 120 L24 74 C23 68 28 64 33 66 L33 52 C33 44 40 42 44 48 L45 58 L45 36 C45 28 52 26 55 32 L55 58 L55 32 C55 24 62 22 65 28 L65 58 L65 36 C65 28 72 28 72 36 L72 58 C74 52 79 49 84 52 L88 74 C94 86 92 108 86 120 C82 128 76 136 70 160Z"
@@ -948,13 +1033,13 @@ function physicsTick(dt) {
 
 // ─── RENDER ──────────────────────────────────────────────
 function draw() {
-  // Fill solid black base first so canvas never shows page background
+  // Fill base colour (black dark / off-white light)
   ctx.globalCompositeOperation = 'source-over';
-  ctx.fillStyle = '#000';
+  ctx.fillStyle = lightMode ? '#f5f5f0' : '#000';
   ctx.fillRect(0,0,simCanvas.width,simCanvas.height);
   // Trail fade effect
   ctx.globalCompositeOperation = 'destination-out';
-  ctx.fillStyle = 'rgba(0,0,0,0.18)';
+  ctx.fillStyle = lightMode ? 'rgba(245,245,240,0.22)' : 'rgba(0,0,0,0.18)';
   ctx.fillRect(0,0,simCanvas.width,simCanvas.height);
   ctx.globalCompositeOperation = 'source-over';
 
@@ -1017,15 +1102,29 @@ function draw() {
     let r,g,b,alpha,size;
     if (p.collapsing)     { r=245;g=240;b=230;alpha=0.85;size=1.8; }
     else if (p.inDisk) {
-      if      (p.diskZone===0){r=245;g=175;b=100;alpha=0.75;size=1.8;}
-      else if (p.diskZone===1){r=230;g=205;b=130;alpha=0.68;size=1.7;}
-      else                    {r=160;g=200;b=240;alpha=0.70;size=1.7;}
+      if (lightMode) {
+        if      (p.diskZone===0){r=180;g=80;b=20; alpha=0.75;size=1.8;}
+        else if (p.diskZone===1){r=130;g=100;b=30;alpha=0.68;size=1.7;}
+        else                    {r=30; g=80; b=160;alpha=0.70;size=1.7;}
+      } else {
+        if      (p.diskZone===0){r=245;g=175;b=100;alpha=0.75;size=1.8;}
+        else if (p.diskZone===1){r=230;g=205;b=130;alpha=0.68;size=1.7;}
+        else                    {r=160;g=200;b=240;alpha=0.70;size=1.7;}
+      }
     } else if (p.selected) {
-      if(p.type==='H'){r=230;g=235;b=255;alpha=0.95;size=2.2;}
-      else            {r=255;g=220;b=100;alpha=0.95;size=2.2;}
+      if (lightMode) {
+        r=20;g=20;b=20;alpha=0.95;size=2.2;
+      } else {
+        if(p.type==='H'){r=230;g=235;b=255;alpha=0.95;size=2.2;}
+        else            {r=255;g=220;b=100;alpha=0.95;size=2.2;}
+      }
     } else {
-      if(p.type==='H'){r=210;g=215;b=235;alpha=0.65;size=1.6;}
-      else            {r=235;g=210;b=130;alpha=0.65;size=1.6;}
+      if (lightMode) {
+        r=30;g=30;b=30;alpha=0.65;size=1.6;
+      } else {
+        if(p.type==='H'){r=210;g=215;b=235;alpha=0.65;size=1.6;}
+        else            {r=235;g=210;b=130;alpha=0.65;size=1.6;}
+      }
     }
     ctx.globalAlpha=alpha;
     ctx.beginPath(); ctx.arc(p.x,p.y,size,0,Math.PI*2);
@@ -1149,18 +1248,31 @@ function announce(sym,name,sub){
   annEl.classList.add('show');
   clearTimeout(annTimer);
   annTimer=setTimeout(()=>annEl.classList.remove('show'),3500);
-  addStamp(sym, name);
 }
 
 const stampsLayer=document.getElementById('stamps-layer');
 const stamps=[];
+let stampTimeout=null;
 function addStamp(sym, name) {
-  const x = starSystems.length ? starSystems[starSystems.length-1].cx : gest.x*simCanvas.width;
-  const y = starSystems.length ? starSystems[starSystems.length-1].cy : gest.y*simCanvas.height;
+  // Remove all existing stamps completely
+  stamps.forEach(el => el.remove());
+  stamps.length = 0;
+  stampsLayer.innerHTML = ''; // nuclear clear
+  clearTimeout(stampTimeout);
+
+  const x = simCanvas.width / 2;
+  const y = simCanvas.height / 2 + 60;
   const el=document.createElement('div');
   el.className='stamp'; el.style.left=x+'px'; el.style.top=y+'px';
+  el.style.transition='opacity 1s ease';
   el.innerHTML=`<span class="stamp-name">${name}</span>`;
   stampsLayer.appendChild(el); stamps.push(el);
+
+  // Fade out after 10s
+  stampTimeout = setTimeout(() => {
+    el.style.opacity='0';
+    setTimeout(()=>{ el.remove(); stamps.length=0; }, 1000);
+  }, 10000);
 }
 
 // ─── NARRATIVE PROMPT SYSTEM ─────────────────────────────
@@ -1395,7 +1507,19 @@ async function startCamera(){
     }
     if(video.requestVideoFrameCallback)video.requestVideoFrameCallback(sendFrame);
     else setInterval(async()=>{if(video.readyState>=2)await hands.send({image:video});},1000/30);
-  }catch(e){console.warn('Camera unavailable:',e);}
+    // Show tour only after camera permission granted
+    setTimeout(() => {
+      document.getElementById('tour-overlay').classList.add('visible');
+      renderTourStep();
+    }, 500);
+  }catch(e){
+    console.warn('Camera unavailable:',e);
+    // Show tour anyway if camera denied
+    setTimeout(() => {
+      document.getElementById('tour-overlay').classList.add('visible');
+      renderTourStep();
+    }, 500);
+  }
 }
 
 // ─── MAIN LOOP ───────────────────────────────────────────
@@ -1662,12 +1786,18 @@ function saveExperiment() {
   document.getElementById('simHamburger').classList.remove('open');
 }
 
+
+// ─── LIGHT / DARK MODE ───────────────────────────────────
+let lightMode = true;
+function toggleMode() {
+  lightMode = !lightMode;
+  document.body.classList.toggle('light-mode', lightMode);
+  document.getElementById('mode-toggle-icon').textContent = lightMode ? '☽' : '☀';
+}
 // ─── INIT ────────────────────────────────────────────────
 initParticles();
 startCamera();
 requestAnimationFrame(loop);
-// Start tour after short delay so UI elements are rendered
-setTimeout(renderTourStep, 300);
 </script>
 </body>
 </html>
