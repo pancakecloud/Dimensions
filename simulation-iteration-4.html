@@ -456,6 +456,83 @@ function initParticles() {
 const SIM = { IDLE:'IDLE', SELECTED:'SELECTED', COLLAPSING:'COLLAPSING', EXPLORING:'EXPLORING' };
 let simState = SIM.IDLE;
 
+// ─── AUDIO ───────────────────────────────────────────────
+const audioFiles = {
+  base: 'audios/base.mp3',
+  formation: 'audios/formation.mp3',
+  formed: 'audios/formed.mp3',
+  lost: 'audios/lost.mp3',
+  merge: 'audios/merge.mp3',
+};
+
+const audioClips = {};
+let audioUnlocked = false;
+
+function initAudioClips() {
+  if (Object.keys(audioClips).length) return;
+  for (const [name, src] of Object.entries(audioFiles)) {
+    const clip = new Audio(src);
+    clip.preload = 'auto';
+    clip.loop = name === 'base';
+    clip.volume = name === 'base' ? 0.14 : 0.42;
+    audioClips[name] = clip;
+  }
+}
+
+function setAudioMuted(muted) {
+  for (const clip of Object.values(audioClips)) {
+    clip.muted = muted;
+    if (muted) clip.pause();
+  }
+  if (!muted) {
+    const base = audioClips.base;
+    if (base && simState !== SIM.IDLE) base.play().catch(() => {});
+  }
+}
+
+function playSound(name, { restart = true, volume, loop } = {}) {
+  if (simMuted) return;
+  const clip = audioClips[name];
+  if (!clip) return;
+  if (typeof volume === 'number') clip.volume = volume;
+  if (typeof loop === 'boolean') clip.loop = loop;
+  if (restart) clip.currentTime = 0;
+  const played = clip.play();
+  if (played && typeof played.catch === 'function') played.catch(() => {});
+}
+
+function startBaseAudio() {
+  if (simMuted) return;
+  const base = audioClips.base;
+  if (!base) return;
+  base.loop = true;
+  base.volume = 0.14;
+  const played = base.play();
+  if (played && typeof played.catch === 'function') played.catch(() => {});
+}
+
+function unlockAudio() {
+  if (audioUnlocked) return;
+  audioUnlocked = true;
+  initAudioClips();
+  if (simMuted) {
+    setAudioMuted(true);
+    return;
+  }
+  startBaseAudio();
+}
+
+function onAudioGesture() {
+  unlockAudio();
+  window.removeEventListener('pointerdown', onAudioGesture, true);
+  window.removeEventListener('keydown', onAudioGesture, true);
+  window.removeEventListener('touchstart', onAudioGesture, true);
+}
+
+window.addEventListener('pointerdown', onAudioGesture, true);
+window.addEventListener('keydown', onAudioGesture, true);
+window.addEventListener('touchstart', onAudioGesture, true);
+
 // ─── STAR SYSTEMS ARRAY ──────────────────────────────────
 let starSystems = [];
 
@@ -504,6 +581,8 @@ function beginCollapse(cx, cy, mass, turbulence, selected) {
   collapse.starParticles=starPts; collapse.diskParticles=diskPts;
 
   simState=SIM.COLLAPSING; clockOn=true;
+  playSound('formation');
+  startBaseAudio();
   announce('∿','Molecular Cloud Collapsing',
     `${mass.toFixed(1)} M☉ · ${count} star${count>1?'s':''}`);
 }
@@ -595,6 +674,7 @@ function finishCollapse() {
   truncateOverlappingDisks();
 
   const label = stars[0].label + (count>1?` × ${count}`:'');
+  playSound('formed');
   announce('☀', label, `${collapse.mass.toFixed(1)} M☉ · disk forming`);
 }
 
@@ -703,6 +783,7 @@ function tickCaptures(dt) {
       if (bIdx !== -1) starSystems.splice(bIdx, 1);
       pendingCaptures.splice(ci, 1);
       truncateOverlappingDisks();
+      playSound('merge');
       announce('⊕', 'Binary Formed', `${pc.mA.toFixed(1)} + ${pc.mB.toFixed(1)} M☉ now orbiting together`);
     }
   }
@@ -921,6 +1002,7 @@ let fateWarnTimer = null;
 function showFateWarning(msg, fate) {
   const sym   = fate==='shred' ? '💫' : fate==='eject' ? '⚡' : '⚠';
   const title = fate==='shred' ? 'Planet Shredding' : fate==='eject' ? 'Orbital Instability' : 'Loosely Bound';
+  if (fate === 'loose') playSound('lost');
   announce(sym, title, msg);
   clearTimeout(annTimer);
   annTimer = setTimeout(() => document.getElementById('ann').classList.remove('show'), 5000);
@@ -953,6 +1035,11 @@ function clearSelection() { for (const p of particles) p.selected=false; }
 function resetSim() {
   starSystems=[]; cosmicMyr=0; clockOn=false; simState=SIM.IDLE; pinchHold=0;
   collapse.running=false;
+  const base = audioClips.base;
+  if (base) {
+    base.pause();
+    base.currentTime = 0;
+  }
   document.getElementById('clock-val').textContent='—';
   document.getElementById('clock-unit').textContent='Cosmic Time';
   stamps.forEach(el=>el.remove()); stamps.length=0;
@@ -1754,11 +1841,7 @@ function toggleMute() {
   const btn = document.getElementById('muteBtn');
   btn.textContent = simMuted ? '🔇 unmute' : '🔊 mute';
   btn.classList.toggle('muted', simMuted);
-  // Mute any audio context if one exists
-  if (typeof audioCtx !== 'undefined' && audioCtx) {
-    audioCtx.suspend && (simMuted ? audioCtx.suspend() : audioCtx.resume());
-  }
-  // Mute video element (camera feed has no audio but good practice)
+  setAudioMuted(simMuted);
   const vid = document.getElementById('video-src');
   if (vid) vid.muted = true; // always muted
 }
