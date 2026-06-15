@@ -474,7 +474,7 @@ function initAudioClips() {
     const clip = new Audio(src);
     clip.preload = 'auto';
     clip.loop = name === 'base';
-    clip.volume = name === 'base' ? 0.14 : 0.42;
+    clip.volume = name === 'base' ? 0.24 : 0.42;
     audioClips[name] = clip;
   }
 }
@@ -506,7 +506,7 @@ function startBaseAudio() {
   const base = audioClips.base;
   if (!base) return;
   base.loop = true;
-  base.volume = 0.14;
+  base.volume = 0.24;
   const played = base.play();
   if (played && typeof played.catch === 'function') played.catch(() => {});
 }
