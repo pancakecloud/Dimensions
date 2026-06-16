@@ -73,12 +73,20 @@ body { background: #000; overflow: hidden; }
   top: 50%; left: 50%; transform: translate(-50%,-50%);
   text-align: center; pointer-events: none;
   opacity: 0; transition: opacity 0.7s;
+  background: rgba(0,0,0,0.75);
+  border: 1.5px solid rgba(255,255,255,0.25);
+  padding: 16px 28px;
 }
 #ann.show { opacity: 1; }
 .ann-sym  { display: none; }
-.ann-name { font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: rgba(255,255,255,0.38); margin-top: 6px; display: block; }
-.ann-sub  { font-size: 9px; letter-spacing: 0.1em; color: rgba(232,25,125,0.55); margin-top: 3px; display: block; }
-
+.ann-name { font-size: 15px; letter-spacing: 0.2em; text-transform: uppercase; color: rgba(255,255,255,0.95); margin-top: 0; display: block; font-weight: 600; }
+.ann-sub  { font-size: 12px; letter-spacing: 0.1em; color: rgba(232,25,125,1); margin-top: 6px; display: block; }
+body.light-mode #ann {
+  background: rgba(255,255,255,0.92);
+  border: 1.5px solid #111;
+}
+body.light-mode .ann-name { color: rgba(0,0,0,0.9); }
+body.light-mode .ann-sub  { color: rgba(232,25,125,1); }
 /* ── STAMPS ── */
 #stamps-layer { position: fixed; inset: 0; z-index: 14; pointer-events: none; }
 .stamp { position: absolute; pointer-events: none; text-align: center; animation: stamp-in 1.2s ease forwards; }
@@ -163,7 +171,7 @@ body { background: #000; overflow: hidden; }
 .btn-back::before { content: '←'; font-size: 1.1rem; }
 /* ── HAMBURGER MENU ── */
 .sim-hamburger-wrap {
-  position: fixed; bottom: 24px; left: 10px; z-index: 50;
+  position: fixed; bottom: 24px; left: 0; z-index: 50;
 }
 .sim-hamburger-btn {
   width: 52px; height: 52px;
@@ -186,7 +194,7 @@ body { background: #000; overflow: hidden; }
   overflow: hidden; width: 0;
   transition: width 0.35s cubic-bezier(0.76, 0, 0.24, 1); white-space: nowrap;
 }
-.sim-hamburger-wrap.open .sim-hamburger-menu { width: fit-content; }
+.sim-hamburger-wrap.open .sim-hamburger-menu { width: 420px; }
 .sim-hamburger-link {
   padding: 0 24px; height: 52px; font-size: 0.88rem; font-family: 'Space Grotesk', sans-serif;
   color: rgba(255,255,255,0.7); cursor: pointer; border: none; background: transparent;
@@ -218,7 +226,7 @@ body.light-mode .param-bar { background: rgba(0,0,0,0.5); }
 /* Black cosmic time text */
 body.light-mode .clock-val { color: #111; }
 body.light-mode .clock-unit { color: rgba(0,0,0,0.5); }
-body.light-mode .ann-name { color: rgba(0,0,0,0.45); }
+
 body.light-mode .stamp-name { color: rgba(0,0,0,0.35); }
 body.light-mode .sim-hamburger-btn {
   background: rgba(0,0,0,0.08);
@@ -326,7 +334,7 @@ body.light-mode #mode-toggle-icon { color: rgba(0,0,0,0.5); }
 </div>
 
 <!-- Buttons -->
-<!-- <button class="btn-pink ui" id="btn-explore" onclick="enterFreeplay()" style="display:none;">Start exploring!</button> -->
+<button class="btn-pink ui" id="btn-explore" onclick="enterFreeplay()" style="display:none;">Start exploring!</button>
 <button class="btn-pink ui" id="btn-reset" onclick="resetSim()">Reset</button>
 
 <!-- Light/Dark mode toggle -->
@@ -356,6 +364,12 @@ body.light-mode #mode-toggle-icon { color: rgba(0,0,0,0.5); }
 </div>
 
 <!-- Hand guides -->
+<div class="ui hand-guide" id="guide-left">
+  <svg width="100" height="130" viewBox="0 0 140 170" fill="none">
+    <path d="M70 160 C46 160 30 142 28 120 L24 74 C23 68 28 64 33 66 L33 52 C33 44 40 42 44 48 L45 58 L45 36 C45 28 52 26 55 32 L55 58 L55 32 C55 24 62 22 65 28 L65 58 L65 36 C65 28 72 28 72 36 L72 58 C74 52 79 49 84 52 L88 74 C94 86 92 108 86 120 C82 128 76 136 70 160Z"
+      stroke="white" stroke-width="1.5" fill="none" stroke-dasharray="4 4"/>
+  </svg>
+</div>
 <div class="ui hand-guide" id="guide-right">
   <svg width="100" height="130" viewBox="0 0 140 170" fill="none">
     <path d="M70 160 C46 160 30 142 28 120 L24 74 C23 68 28 64 33 66 L33 52 C33 44 40 42 44 48 L45 58 L45 36 C45 28 52 26 55 32 L55 58 L55 32 C55 24 62 22 65 28 L65 58 L65 36 C65 28 72 28 72 36 L72 58 C74 52 79 49 84 52 L88 74 C94 86 92 108 86 120 C82 128 76 136 70 160Z"
@@ -459,7 +473,6 @@ let simState = SIM.IDLE;
 // ─── AUDIO ───────────────────────────────────────────────
 const audioFiles = {
   base: 'audios/base.mp3',
-  formation: 'audios/formation.mp3',
   formed: 'audios/formed.mp3',
   lost: 'audios/lost.mp3',
   merge: 'audios/merge.mp3',
@@ -468,13 +481,92 @@ const audioFiles = {
 const audioClips = {};
 let audioUnlocked = false;
 
+// Web Audio API nodes for gesture-reactive base track
+let audioCtx = null;
+let baseSource = null;
+let baseGain = null;
+let baseBuffer = null;
+let baseStarted = false;
+
+// Crackle layer — fades in with right hand shake
+let crackleSource = null;
+let crackleGain = null;
+let crackleBuffer = null;
+
+async function initWebAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  baseGain = audioCtx.createGain();
+  baseGain.gain.value = 0.0;
+  baseGain.connect(audioCtx.destination);
+
+  crackleGain = audioCtx.createGain();
+  crackleGain.gain.value = 0.0;
+  crackleGain.connect(audioCtx.destination);
+
+  try {
+    const res = await fetch('audios/base.mp3');
+    const arr = await res.arrayBuffer();
+    baseBuffer = await audioCtx.decodeAudioData(arr);
+  } catch(e) { console.warn('base audio failed:', e); }
+
+  try {
+    const res = await fetch('audios/crackle.mp3');
+    const arr = await res.arrayBuffer();
+    crackleBuffer = await audioCtx.decodeAudioData(arr);
+  } catch(e) { console.warn('crackle audio failed:', e); }
+}
+
+function startBaseAudioNode() {
+  if (!audioCtx || !baseBuffer || baseStarted || simMuted) return;
+  baseSource = audioCtx.createBufferSource();
+  baseSource.buffer = baseBuffer;
+  baseSource.loop = true;
+  baseSource.playbackRate.value = 1.0;
+  baseSource.connect(baseGain);
+  baseSource.start(0);
+
+  // Start crackle looping at zero volume — tickAudio fades it in with shake
+  if (crackleBuffer) {
+    crackleSource = audioCtx.createBufferSource();
+    crackleSource.buffer = crackleBuffer;
+    crackleSource.loop = true;
+    crackleSource.connect(crackleGain);
+    crackleSource.start(0);
+  }
+
+  baseStarted = true;
+}
+
+// Called every frame from updateUI to smoothly respond to gestures
+function tickAudio() {
+  if (!audioCtx || !baseStarted || simMuted) return;
+
+  // Pinch (left hand) → volume
+  const targetVol = simState === SIM.IDLE ? 0.0 : 0.12 + gest.pinch * 1.5;
+  const currentVol = baseGain.gain.value;
+  baseGain.gain.value = currentVol + (targetVol - currentVol) * 0.04;
+
+  // Shake (right hand) → playback rate
+  const targetRate = 1.0 + gest.shake * 0.6;
+  const currentRate = baseSource.playbackRate.value;
+  baseSource.playbackRate.value = currentRate + (targetRate - currentRate) * 0.05;
+
+  // Shake (right hand) → crackle volume, fades in as shake increases
+  if (crackleGain) {
+    const targetCrackle = gest.shake * 0.9;
+    const currentCrackle = crackleGain.gain.value;
+    crackleGain.gain.value = currentCrackle + (targetCrackle - currentCrackle) * 0.08;
+  }
+}
+
 function initAudioClips() {
   if (Object.keys(audioClips).length) return;
   for (const [name, src] of Object.entries(audioFiles)) {
+    if (name === 'base') continue; // base handled by Web Audio
     const clip = new Audio(src);
     clip.preload = 'auto';
-    clip.loop = name === 'base';
-    clip.volume = name === 'base' ? 0.24 : 0.42;
+    clip.volume = 0.42;
     audioClips[name] = clip;
   }
 }
@@ -484,9 +576,17 @@ function setAudioMuted(muted) {
     clip.muted = muted;
     if (muted) clip.pause();
   }
-  if (!muted) {
-    const base = audioClips.base;
-    if (base && simState !== SIM.IDLE) base.play().catch(() => {});
+  if (baseGain) {
+    baseGain.gain.value = muted ? 0 : baseGain.gain.value;
+  }
+  if (crackleGain) {
+    crackleGain.gain.value = muted ? 0 : crackleGain.gain.value;
+  }
+  if (muted && baseSource) {
+    try { baseSource.stop(); } catch(e) {}
+    baseStarted = false;
+  } else if (!muted && baseBuffer && !baseStarted) {
+    startBaseAudioNode();
   }
 }
 
@@ -502,24 +602,19 @@ function playSound(name, { restart = true, volume, loop } = {}) {
 }
 
 function startBaseAudio() {
-  if (simMuted) return;
-  const base = audioClips.base;
-  if (!base) return;
-  base.loop = true;
-  base.volume = 0.24;
-  const played = base.play();
-  if (played && typeof played.catch === 'function') played.catch(() => {});
+  if (audioCtx) {
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    startBaseAudioNode();
+  }
 }
 
 function unlockAudio() {
   if (audioUnlocked) return;
   audioUnlocked = true;
   initAudioClips();
-  if (simMuted) {
-    setAudioMuted(true);
-    return;
-  }
-  startBaseAudio();
+  initWebAudio().then(() => {
+    if (!simMuted) startBaseAudioNode();
+  });
 }
 
 function onAudioGesture() {
@@ -581,7 +676,6 @@ function beginCollapse(cx, cy, mass, turbulence, selected) {
   collapse.starParticles=starPts; collapse.diskParticles=diskPts;
 
   simState=SIM.COLLAPSING; clockOn=true;
-  playSound('formation');
   startBaseAudio();
   announce('∿','Molecular Cloud Collapsing',
     `${mass.toFixed(1)} M☉ · ${count} star${count>1?'s':''}`);
@@ -759,21 +853,34 @@ function tickCaptures(dt) {
 
     if (pc.progress >= 1) {
       const G_SIM = 400;
-      const sep   = Math.hypot(pc.a.cx - pc.b.cx, pc.a.cy - pc.b.cy) || 60;
-      const orbitSpeed = Math.min(0.003, Math.sqrt(G_SIM * totalM) / Math.pow(Math.max(sep, 40), 1.5));
+      const orbitSpeed = 0.006 + Math.random() * 0.002;
+      const binaryOrbitR = 30; // fixed tight orbit radius
 
       pc.a.cx = bx; pc.a.cy = by;
       pc.a.disk.cx = bx; pc.a.disk.cy = by;
 
+      // Place star A at angle 0, star B at angle π — opposite sides of barycentre
+      let angleA = 0;
       for (const star of pc.a.stars) {
-        star.baryAngle  = Math.atan2(star.y - by, star.x - bx);
-        star.baryR      = Math.max(20, Math.hypot(star.x - bx, star.y - by));
-        star.orbitSpeed = orbitSpeed; star.captured = true;
+        star.baryAngle  = angleA;
+        star.baryR      = binaryOrbitR;
+        star.orbitSpeed = orbitSpeed;
+        star.captured   = true;
+        // Immediately set position
+        star.x = bx + Math.cos(star.baryAngle) * binaryOrbitR;
+        star.y = by + Math.sin(star.baryAngle) * binaryOrbitR;
+        angleA += Math.PI / Math.max(1, pc.a.stars.length);
       }
+      let angleB = Math.PI;
       for (const star of pc.b.stars) {
-        star.baryAngle  = Math.atan2(star.y - by, star.x - bx) + Math.PI;
-        star.baryR      = Math.max(20, Math.hypot(star.x - bx, star.y - by));
-        star.orbitSpeed = orbitSpeed; star.captured = true;
+        star.baryAngle  = angleB;
+        star.baryR      = binaryOrbitR;
+        star.orbitSpeed = orbitSpeed;
+        star.captured   = true;
+        // Immediately set position
+        star.x = bx + Math.cos(star.baryAngle) * binaryOrbitR;
+        star.y = by + Math.sin(star.baryAngle) * binaryOrbitR;
+        angleB += Math.PI / Math.max(1, pc.b.stars.length);
         pc.a.stars.push(star);
       }
 
@@ -1036,10 +1143,9 @@ function resetSim() {
   starSystems=[]; cosmicMyr=0; clockOn=false; simState=SIM.IDLE; pinchHold=0;
   collapse.running=false;
   const base = audioClips.base;
-  if (base) {
-    base.pause();
-    base.currentTime = 0;
-  }
+  if (base) { base.pause(); base.currentTime = 0; }
+  if (baseSource) { try { baseSource.stop(); } catch(e) {} baseStarted = false; }
+  if (crackleSource) { try { crackleSource.stop(); } catch(e) {} crackleSource = null; }
   document.getElementById('clock-val').textContent='—';
   document.getElementById('clock-unit').textContent='Cosmic Time';
   stamps.forEach(el=>el.remove()); stamps.length=0;
@@ -1185,10 +1291,9 @@ function draw() {
   }
 
   for (const p of particles) {
-    if (p.consumed) continue;
+    if (p.consumed || p.collapsing) continue;
     let r,g,b,alpha,size;
-    if (p.collapsing)     { r=245;g=240;b=230;alpha=0.85;size=1.8; }
-    else if (p.inDisk) {
+    if (p.inDisk) {
       if (lightMode) {
         if      (p.diskZone===0){r=180;g=80;b=20; alpha=0.75;size=1.8;}
         else if (p.diskZone===1){r=130;g=100;b=30;alpha=0.68;size=1.7;}
@@ -1216,6 +1321,15 @@ function draw() {
     ctx.globalAlpha=alpha;
     ctx.beginPath(); ctx.arc(p.x,p.y,size,0,Math.PI*2);
     ctx.fillStyle=`rgb(${r},${g},${b})`; ctx.fill();
+  }
+
+  // Draw collapsing particles last so they render on top of free particles
+  for (const p of particles) {
+    if (p.consumed || !p.collapsing) continue;
+    ctx.globalAlpha = 0.9;
+    ctx.beginPath(); ctx.arc(p.x, p.y, 2.2, 0, Math.PI*2);
+    ctx.fillStyle = lightMode ? 'rgb(20,20,20)' : 'rgb(245,240,230)';
+    ctx.fill();
   }
 
   for (const sys of starSystems) {
@@ -1261,8 +1375,8 @@ function draw() {
       ctx.arc(d.cx,d.cy,d.rocheR,0,Math.PI*2);
       ctx.strokeStyle='rgba(255,80,80,0.7)'; ctx.lineWidth=0.5; ctx.setLineDash([2,4]);
       ctx.stroke(); ctx.setLineDash([]);
-      ctx.globalAlpha=0.20; ctx.fillStyle='#fff';
-      ctx.font='7px Space Grotesk,sans-serif'; ctx.textAlign='center';
+      ctx.globalAlpha=0.35; ctx.fillStyle= lightMode ? '#111' : '#fff';
+      ctx.font='10px Space Grotesk,sans-serif'; ctx.textAlign='center';
       const labelR = r => Math.min(r, d.outerR*0.92);
       ctx.fillText('rocky', d.cx+labelR(d.innerR+(gasStart-d.innerR)*0.5), d.cy-4);
       ctx.fillText('gas',   d.cx+labelR(gasStart+(iceStart-gasStart)*0.5),  d.cy-4);
@@ -1459,6 +1573,7 @@ function enterFreeplay(){
 function updatePhaseLabel(){}
 
 function updateUI(){
+  tickAudio();
   const cv=document.getElementById('clock-val'),cu=document.getElementById('clock-unit');
   if(clockOn){
     if(cosmicMyr>=1000){cv.textContent=(cosmicMyr/1000).toFixed(2);cu.textContent='Billion Years';}
